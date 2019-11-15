@@ -1,0 +1,963 @@
+#include <stdio.h>
+#include <windows.h>
+#include <iostream>
+#include <unistd.h>
+#include <cstdlib>
+#include <time.h>
+#include <string.h>
+#include <vector>
+#include <ctype.h>
+#include <conio.h>
+
+using namespace std;
+void setWindow();                                            // create a new window
+void rule();                                                 // print out the rules for play
+void draw2(int start_x, int start_y, int speed);             // draw number 2 on the screen
+void draw0(int start_x, int start_y, int speed);             // draw number 0 on the screen
+void draw4(int start_x, int start_y, int speed);             // draw number 4 on the screen
+void draw8(int start_x, int start_y, int speed);             // draw number 8 on the screen
+void drawFrame();                                            // draw the 4x4 frame with score and largest number
+void print_word_score(int start_x, int start_y);             // print out word "score"
+void print_score(int start_x, int start_y, int score);       // print out the score
+void print_word_largest_number(int start_x, int start_y);    // print out the word "Largest number"
+void print_largest_number(int start_x, int start_y, int content[]);   //print out the largest number
+
+int randomNumber();                                          // get a random number
+int randomPosition(unsigned int PlaceHasNotChosen);          // get a random place from empty spaces
+int largest(int content[]);                                  // get the largest number
+
+void SetColor(int colorID);                                  // set the color of the text
+void SetCursorPosition(const int x, const int y);            // set cursor position
+void SetBackColor();                                         // set background color of the text
+
+int ChangeDirection_arrow(int content[], int score);         // move the number
+int up(int content[], int score);                            // move all the numbers up
+int down(int content[], int score);                          // move all the numbers down
+int left(int content[], int score);                          // move all the numbers left
+int right (int content[], int score);                        // move all the numbers right
+
+void print_pop(int placeChosen, int pop);                    // print out pop in the corresponding place being choose
+int draw_GameOver(int score);                                // draw game over
+
+int main()
+{
+    setWindow();
+    while (true)
+    {
+        drawFrame();
+
+        int content[16] = {0};    // create a list of 16 to store number
+        int score = 0;
+
+        // play
+        while (true)
+        {
+            int pop = randomNumber();
+
+            // find the amount of available space
+            int placeHasNotChosen = 0;
+            for (int i = 0; i < 16; i++)
+            {
+                if (content[i] == 0)
+                    placeHasNotChosen++;
+            }
+
+            // have available space? If no, exit the loop
+            if (placeHasNotChosen <= 0)
+                break;
+
+            // get a random place
+            int placeChosen = randomPosition(placeHasNotChosen);
+
+            // create a vector store available space
+            vector<int> available;
+            for (int i = 0; i < 16; i++)
+            {
+                if (content[i] == 0)
+                    available.push_back(i);
+            }
+
+            placeChosen = available.at(placeChosen);
+            print_pop(placeChosen, pop);
+            content[placeChosen] = pop;
+
+            print_score(34,10,score);
+            print_largest_number(34,13,content);
+            score = ChangeDirection_arrow(content, score);
+        }
+
+        // game over
+        int tmp = draw_GameOver(score);
+        if (tmp == 1)    // again
+        {
+            system("cls");
+            continue;
+        }
+        else             // exit
+            break;
+    }
+
+    return 0;
+}
+
+void setWindow()
+{
+    int cols = 41;
+    int lines = 32;
+    system("title 2048");//set the title of the game
+    char cmd[30];
+    sprintf(cmd, "mode con cols=%d lines=%d", cols * 2, lines);//create a working space
+    system(cmd);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 2); //change the color of the title
+
+    SetColor(12);
+    draw2(9,7,50);
+    SetColor(2);
+    draw0(14,7,50);
+    SetColor(6);
+    draw4(19,7,50);
+    SetColor(3);
+    draw8(24,7,50);    //draw title 2048
+
+    SetColor(15);
+    rule();
+
+    SetColor(14);
+    SetCursorPosition(15,25);
+    cout << "Are you ready? " ;
+    system("pause");
+
+    system("cls");
+}
+
+void drawFrame()
+{
+    SetColor(11);
+    for (int j = 0; j < 5; j++)
+    {
+        for (int i = 0; i < 23; i++)
+        {
+            SetCursorPosition(20+i,8+3*j);
+            cout << "_" ;
+        }
+    }
+    for (int j = 0; j < 5; j++)
+    {
+        for (int i = 0; i < 12; i++)
+        {
+            SetCursorPosition((2*9+1)+6*j,9+i);
+            cout << "|" << endl;
+        }
+    }
+    print_word_score(29,10);
+    print_word_largest_number(25,13);
+}
+
+int randomNumber()    // get a random number among 2, 4, 8
+{
+    srand (time(NULL));
+    int choose = rand()%3;
+    int pop;
+    if (choose == 0)
+        pop = 8;
+    else if (choose == 1)
+        pop = 4;
+    else
+        pop = 2;
+    return pop;
+}
+
+int randomPosition(unsigned int placeHasNotChosen)
+{
+    srand (time(NULL));
+    int placeChosen = rand() % placeHasNotChosen;
+    return placeChosen;
+}
+
+int ChangeDirection_arrow(int content[], int score)
+{
+    char ch;
+    ch = _getch();
+    if (_kbhit())
+    {
+        switch (ch)
+        {
+        case -32:
+            ch = _getch();
+            switch (ch)
+            {
+            case 72:    // up
+                score = up(content,score);
+                break;
+            case 80:    // down
+                score = down(content,score);
+                break;
+            case 77:    // right
+                score = right(content,score);
+                break;
+            case 75:    // left
+                score = left(content,score);
+                break;
+            default:
+                break;
+            }
+            return score;
+        default:
+            return score;
+        }
+    }
+    return score;
+}
+
+void draw2(int start_x, int start_y, int speed)
+{
+    for (int j = 0; j < 3; j++)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            SetCursorPosition(2*(start_x+i),start_y+2*j);
+            cout << "2";
+            Sleep(speed);
+        }
+    }
+
+    SetCursorPosition(2*(start_x+2),start_y+1);
+    cout << "2";
+    Sleep(speed);
+
+    SetCursorPosition(2*start_x,start_y+3);
+    cout << "2";
+    Sleep(speed);
+}
+
+void draw0(int start_x, int start_y, int speed)
+{
+    for (int j = 0; j < 5; j++)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            SetCursorPosition(2*(start_x+2*i),start_y+j);
+            cout << "0";
+            Sleep(speed);
+        }
+    }
+    for (int i = 0; i < 2; i++)
+    {
+        SetCursorPosition(2*(start_x+1),start_y+4*i);
+        cout << "0";
+        Sleep(speed);
+    }
+}
+
+void draw4(int start_x, int start_y, int speed)
+{
+    for (int j = 0; j < 3; j++)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            SetCursorPosition(2*(start_x+2*i),start_y+j);
+            cout << "4";
+            Sleep(speed);
+        }
+    }
+    for (int j = 0; j < 2; j++)
+    {
+        SetCursorPosition(2*(start_x+2),start_y+3+j);
+        cout << "4";
+        Sleep(speed);
+    }
+    SetCursorPosition(2*(start_x+1),start_y+2);
+    cout << "4";
+    Sleep(speed);
+}
+
+void draw8(int start_x, int start_y, int speed)
+{
+    for (int j = 0; j < 5; j++)
+    {
+        for (int i = 0; i < 2; i++)
+        {
+            SetCursorPosition(2*(start_x+2*i),start_y+j);
+            cout << "8";
+            Sleep(speed);
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        SetCursorPosition(2*(start_x+1),start_y+2*i);
+        cout << "8";
+        Sleep(speed);
+    }
+}
+
+void print_pop(int placeChosen, int pop)
+{
+    if (placeChosen == 0)
+        SetCursorPosition(19*2,19);
+    else if (placeChosen == 1)
+        SetCursorPosition(10*2,10);
+    else if (placeChosen == 2)
+        SetCursorPosition(13*2,10);
+    else if (placeChosen == 3)
+        SetCursorPosition(16*2,10);
+    else if (placeChosen == 4)
+        SetCursorPosition(19*2,10);
+    else if (placeChosen == 5)
+        SetCursorPosition(10*2,13);
+    else if (placeChosen == 6)
+        SetCursorPosition(13*2,13);
+    else if (placeChosen == 7)
+        SetCursorPosition(16*2,13);
+    else if (placeChosen == 8)
+        SetCursorPosition(19*2,13);
+    else if (placeChosen == 9)
+        SetCursorPosition(10*2,16);
+    else if (placeChosen == 10)
+        SetCursorPosition(13*2,16);
+    else if (placeChosen == 11)
+        SetCursorPosition(16*2,16);
+    else if (placeChosen == 12)
+        SetCursorPosition(19*2,16);
+    else if (placeChosen == 13)
+        SetCursorPosition(10*2,19);
+    else if (placeChosen == 14)
+        SetCursorPosition(13*2,19);
+    else if (placeChosen == 15)
+        SetCursorPosition(16*2,19);
+    cout << pop;
+}
+
+void print_word_score(int start_x, int start_y)
+{
+    SetCursorPosition(start_x*2, start_y);
+    cout << "Score: ";
+}
+
+void print_score(int start_x, int start_y, int score)
+{
+    SetCursorPosition(start_x*2, start_y);
+    cout << score;
+}
+
+void SetCursorPosition(const int x, const int y)
+{
+    COORD position;
+    position.X = x;
+    position.Y = y;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), position);
+}
+
+void SetColor(int colorID)
+{
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), colorID);
+}
+
+void SetBackColor()
+{
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                            FOREGROUND_BLUE |
+                            BACKGROUND_BLUE |
+                            BACKGROUND_GREEN |
+                            BACKGROUND_RED );
+}
+
+int draw_GameOver(int score)
+{
+    // game over board
+    SetColor(14);
+    Sleep(500);
+    SetCursorPosition(10*2, 8);
+    cout << "------------------------------------------" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 9);
+    cout << " |               Game Over !!!              |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 10);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 11);
+    cout << " |              Sorry! You loss:(           |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 12);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 13);
+    cout << " |             You score:                   |" ;
+    SetCursorPosition(24*2, 13);
+    cout << score ;
+    Sleep(30);
+    SetCursorPosition(9*2, 14);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 15);
+    cout << " |       Do you want to play again?         |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 16);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 17);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 18);
+    cout << " |Sure!     I would rather choose to study. |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 19);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(9*2, 20);
+    cout << " |                                          |" ;
+    Sleep(30);
+    SetCursorPosition(10*2, 21);
+    cout << "------------------------------------------" ;
+
+    // add background color for "Sure"
+    Sleep(100);
+    SetCursorPosition(10*2, 18);
+    SetBackColor();
+    cout << "Sure!" ;
+    SetCursorPosition(0, 31);
+
+    // choose
+    int ch;
+    int tmp_key = 1;
+    bool flag = false;
+    while ((ch = _getch()))
+    {
+        switch (ch)
+        {
+        case 75: // left
+            if (tmp_key > 1)
+            {
+                SetCursorPosition(10*2, 18);
+                SetBackColor();
+                cout << "Sure!" ;
+                SetCursorPosition(15*2, 18);
+                SetColor(14);
+                cout << "I would rather choose to study." ;
+                --tmp_key;
+            }
+            break;
+        case 77: // right
+            if (tmp_key < 2)
+            {
+                SetCursorPosition(15*2, 18);
+                SetBackColor();
+                cout << "I would rather choose to study." ;
+                SetCursorPosition(10*2, 18);
+                SetColor(14);
+                cout << "Sure!" ;
+                ++tmp_key;
+            }
+            break;
+        case 13: // enter
+            flag = true;
+            break;
+        default:
+            break;
+        }
+
+        SetCursorPosition(0, 31);
+        if (flag) {
+            break;
+        }
+    }
+
+    SetColor(14);
+    switch (tmp_key)
+    {
+    case 1:
+        return 1; // restart
+    case 2:
+        return 2; // exit
+    default:
+        return 1;
+    }
+}
+
+void rule()
+{
+    SetCursorPosition(11-5,16);
+    cout << "Purpose: Get the largest number as you can. \n";
+    SetCursorPosition(11+9-5,17);
+    cout << "When there is no more space left to get a new number, game over. \n";
+    SetCursorPosition(11-5,19);
+    cout << "Control: Use arrows to move all the numbers up, down, left, and right. \n";
+    SetCursorPosition(11-5,21);
+    cout << "Rules: Control the the movements of all the numbers.";
+    SetCursorPosition(11+7-5,22);
+    cout << "every time when you move, a random new number will appear. \n";
+}
+
+int up(int content[], int score)
+{
+    for (int runtime = 0; runtime < 4; runtime++)
+                {
+                    for (int j = 2; j > 0; j--)
+                    {
+                        for (int i = 5+4*j; i < 8+4*j; i++)
+                        {
+                            if (content[i] != 0 && content[i-4] == 0)
+                            {
+                                content[i-4] = content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4), 13+3*j);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4), 10+3*j);
+                                cout << content[i-4];
+                            }
+                        }
+                    }
+                    if (content[0] != 0 && content[12] == 0)
+                    {
+                        content[12] = content[0];
+                        content[0] = 0;
+
+                        SetCursorPosition(38,19);
+                        cout << "     ";
+                        SetCursorPosition(38,16);
+                        cout << content[12];
+                    }
+                    if (content[12] != 0 && content[8] == 0)
+                    {
+                        content[8] = content[12];
+                        content[12] = 0;
+
+                        SetCursorPosition(38,16);
+                        cout << "     ";
+                        SetCursorPosition(38,13);
+                        cout << content[8];
+                    }
+                    for (int i = 5; i < 8; i++)
+                    {
+                        if (content[i] != 0)
+                        {
+                            if (content[i-4] == 0)
+                            {
+                                content[i-4] = content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4), 13);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4), 10);
+                                cout << content[i-4];
+                            }
+                            else if (content[i-4] == content[i])
+                            {
+                                score += content[i-4];
+
+                                content[i-4] += content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4), 13);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4), 10);
+                                cout << content[i-4];
+                            }
+
+                        }
+                    }
+                    if (content[8] != 0)
+                    {
+                        if (content[4] == 0)
+                        {
+                            content[4] = content[8];
+                            content[8] = 0;
+
+                            SetCursorPosition(38,13);
+                            cout << "     ";
+                            SetCursorPosition(38,10);
+                            cout << content[4];
+                        }
+                        else if (content[4] == content[8])
+                        {
+                            score += content[4];
+
+                            content[4] += content[8];
+                            content[8] = 0;
+
+                            SetCursorPosition(38,13);
+                            cout << "     ";
+                            SetCursorPosition(38,10);
+                            cout << content[4];
+                        }
+                    }
+                    if (content[12] != 0 && content[8] == content[12])
+                    {
+                        score += content[8];
+
+                        content[8] = content[8] + content[12];
+                        content[12] = 0;
+
+                        SetCursorPosition(38,16);
+                        cout << "     ";
+                        SetCursorPosition(38,13);
+                        cout << content[8];
+                    }
+                    if (content[0] != 0 && content[12] == content[0])
+                    {
+                        score += content[12];
+
+                        content[12] = content[12] + content[0];
+                        content[0] = 0;
+
+                        SetCursorPosition(38,19);
+                        cout << "     ";
+                        SetCursorPosition(38,16);
+                        cout << content[12];
+                    }
+                    for (int j = 1; j < 3; j++)
+                    {
+                        for (int i = 5+4*j; i < 8+4*j; i++)
+                        {
+                            if (content[i] != 0 && content[i-4] == content[i])
+                            {
+                                score += content[i-4];
+
+                                content[i-4] = content[i-4] + content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4), 13+3*j);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4), 10+3*j);
+                                cout << content[i-4];
+                            }
+                        }
+                    }
+                }
+    return score;
+}
+
+int down(int content[], int score)
+{
+    for (int runtime = 0; runtime < 4; runtime++)
+                {
+                    for (int j = 0; j < 3; j++)
+                    {
+                        for (int i = 4*j+1; i < 4+4*j; i++)
+                        {
+                            if (content[i] != 0 && content[i+4] == 0)
+                            {
+                                content[i+4] = content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4),10+3*j);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4),13+3*j);
+                                cout << content[i+4];
+                            }
+                        }
+                    }
+                    for (int j = 1; j < 3; j++)
+                    {
+                        if (content[4*j] != 0 && content[4+4*j] == 0)
+                        {
+                            content[4+4*j] = content[4*j];
+                            content[4*j] = 0;
+
+                            SetCursorPosition(38,7+3*j);
+                            cout << "     ";
+                            SetCursorPosition(38,10+3*j);
+                            cout << content[4+4*j];
+                        }
+                    }
+                    for (int i = 9; i < 12; i++)
+                    {
+                        if (content[i] != 0)
+                        {
+                            if (content[i+4] == 0)
+                            {
+                                content[i+4] = content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4),16);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4),19);
+                                cout << content[i+4];
+                            }
+                            if (content[i+4] == content[i])
+                            {
+                                score += content[i+4];
+
+                                content[i+4] += content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4),16);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4),19);
+                                cout << content[i+4];
+                            }
+                        }
+                    }
+                    if (content[12] != 0)
+                    {
+                        if (content[0] == 0)
+                        {
+                            content[0] = content[12];
+                            content[12] = 0;
+
+                            SetCursorPosition(38,16);
+                            cout << "     ";
+                            SetCursorPosition(38,19);
+                            cout << content[0];
+                        }
+                        else if (content[0] == content[12])
+                        {
+                            score += content[0];
+
+                            content[0] += content[12];
+                            content[12] = 0;
+
+                            SetCursorPosition(38,16);
+                            cout << "     ";
+                            SetCursorPosition(38,19);
+                            cout << content[0];
+                        }
+                    }
+                    for (int j = 2; j > 0; j--)
+                    {
+                        if (content[4*j] != 0 && content[4+4*j] == content[4])
+                        {
+                            score += content[4+4*j];
+
+                            content[4+4*j] = content[4+4*j] + content[4*j];
+                            content[4*j] = 0;
+
+                            SetCursorPosition(38,7+3*j);
+                            cout << "     ";
+                            SetCursorPosition(38,10+3*j);
+                            cout << content[4+4*j];
+                        }
+                    }
+                    for (int j = 2; j >= 0; j--)
+                    {
+                        for (int i = 1+4*j; i < 4+4*j; i++)
+                        {
+                            if (content[i] != 0 && content[i+4] == content[i])
+                            {
+                                score += content[i+4];
+
+                                content[i+4] = content[i+4] + content[i];
+                                content[i] = 0;
+
+                                SetCursorPosition(14 + 6*(i%4),10+3*j);
+                                cout << "     ";
+                                SetCursorPosition(14 + 6*(i%4),13+3*j);
+                                cout << content[i+4];
+                            }
+                        }
+                    }
+                }
+    return score;
+}
+
+int left(int content[], int score)
+{
+    for (int runtime = 0; runtime < 4; runtime++)
+                {
+                    for (int i = 1; i < 4; i++)
+                    {
+                        if (content[4*i] != 0 && content[4*i-1] == 0)
+                        {
+                            content[4*i-1] = content[4*i];
+                            content[4*i] = 0;
+
+                            SetCursorPosition(38,7+3*i);
+                            cout << "     ";
+                            SetCursorPosition(32,7+3*i);
+                            cout << content[4*i-1];
+                        }
+                    }
+                    if (content[0] != 0 && content[15] == 0)
+                    {
+                        content[15] = content[0];
+                        content[0] = 0;
+
+                        SetCursorPosition(38,19);
+                        cout << "     ";
+                        SetCursorPosition(32,19);
+                        cout << content[15];
+                    }
+                    for (int j = 1; j < 3; j++)
+                    {
+                        for (int i = 1; i < 5; i++)
+                        {
+                            if (content[4*i-j] != 0 && content[4*i-j-1] == 0)
+                            {
+                                content[4*i-j-1] = content[4*i-j];
+                                content[4*i-j] = 0;
+
+                                SetCursorPosition(38-6*j,7+3*i);
+                                cout << "     ";
+                                SetCursorPosition(38-6*(j+1),7+3*i);
+                                cout << content[4*i-j-1];
+                            }
+                        }
+                    }
+                    for (int j = 2; j > 0; j--)
+                    {
+                        for (int i = 1; i < 5; i++)
+                        {
+                            if (content[4*i-j] != 0 && content[4*i-j-1] == content[4*i-j])
+                            {
+                                score += content[4*i-j-1];
+
+                                content[4*i-j-1] = content[4*i-j-1] + content[4*i-j];
+                                content[4*i-j] = 0;
+
+                                SetCursorPosition(38-6*j,7+3*i);
+                                cout << "     ";
+                                SetCursorPosition(38-6*(j+1),7+3*i);
+                                cout << content[4*i-j-1];
+                            }
+                        }
+                    }
+                    if (content[0] != 0 && content[15] == content[0])
+                    {
+                        score += content[15];
+
+                        content[15] = content[15] + content[0];
+                        content[0] = 0;
+
+                        SetCursorPosition(38,19);
+                        cout << "     ";
+                        SetCursorPosition(32,19);
+                        cout << content[15];
+                    }
+                    for (int i = 1; i < 4; i++)
+                    {
+                        if (content[4*i] != 0 && content[4*i-1] == content[4*i])
+                        {
+                            score += content[4*i-1];
+
+                            content[4*i-1] = content[4*i-1] + content[4*i];
+                            content[4*i] = 0;
+
+                            SetCursorPosition(38,7+3*i);
+                            cout << "     ";
+                            SetCursorPosition(32,7+3*i);
+                            cout << content[4*i-1];
+                        }
+                    }
+                }
+    return score;
+}
+
+int right (int content[], int score)
+{
+    for (int runtime = 0; runtime < 4; runtime++)
+                {
+                    for (int j = 1; j < 3; j++)
+                    {
+                        for (int i = 0; i < 4; i++)
+                        {
+                            if (content[4*i+j] != 0 && content[4*i+j+1] == 0)
+                            {
+                                content[4*i+j+1] = content[4*i+j];
+                                content[4*i+j] = 0;
+
+                                SetCursorPosition(14+6*j,10+3*i);
+                                cout << "     ";
+                                SetCursorPosition(20+6*j,10+3*i);
+                                cout << content[4*i+j+1];
+                            }
+                        }
+                    }
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (content[4*i+3] != 0)
+                        {
+                            if (content[4*i+4] == 0)
+                            {
+                                content[4*i+4] = content[4*i+3];
+                                content[4*i+3] = 0;
+
+                                SetCursorPosition(32,10+3*i);
+                                cout << "     ";
+                                SetCursorPosition(38,10+3*i);
+                                cout << content[4*i+4];
+                            }
+                            else if (content[4*i+4] == content[4*i+3])
+                            {
+                                score += content[4*i+4];
+
+                                content[4*i+4] = content[4*i+4] + content[4*i+3];
+                                content[4*i+3] = 0;
+
+                                SetCursorPosition(32,10+3*i);
+                                cout << "     ";
+                                SetCursorPosition(38,10+3*i);
+                                cout << content[4*i+4];
+                            }
+                        }
+                    }
+                    if (content[15] != 0)
+                    {
+                        if (content[0] == 0)
+                        {
+                            content[0] = content[15];
+                            content[15] = 0;
+
+                            SetCursorPosition(32,19);
+                            cout << "     ";
+                            SetCursorPosition(38,19);
+                            cout << content[0];
+                        }
+                        else if (content[0] == content[15])
+                        {
+                            score += content[0];
+
+                            content[0] += content[15];
+                            content[15] = 0;
+
+                            SetCursorPosition(32,19);
+                            cout << "     ";
+                            SetCursorPosition(38,19);
+                            cout << content[0];
+                        }
+                    }
+                    for (int j = 2; j > 0; j--)
+                    {
+                        for (int i = 0; i < 4; i++)
+                        {
+                            if ((content[4*i+j] != 0) && (content[4*i+j+1] == content[4*i+j]))
+                            {
+                                score += content[4*i+j+1];
+
+                                content[4*i+j+1] = content[4*i+j+1] + content[4*i+j];
+                                content[4*i+j] = 0;
+
+                                SetCursorPosition(14+6*j,10+3*i);
+                                cout << "     ";
+                                SetCursorPosition(20+6*j,10+3*i);
+                                cout << content[4*i+j+1];
+                            }
+                        }
+                    }
+                }
+    return score;
+}
+
+int largest(int content[])
+{
+    int largestNumber = content[0];
+    for (int i = 1; i < 16; i++)
+    {
+        if (content[i] > largestNumber)
+            largestNumber = content[i];
+    }
+    return largestNumber;
+}
+
+void print_word_largest_number(int start_x, int start_y)
+{
+    SetCursorPosition(start_x*2, start_y);
+    cout << "Largest number: ";
+}
+
+void print_largest_number(int start_x, int start_y, int content[])
+{
+    int largest_number = largest(content);
+    SetCursorPosition(start_x*2, start_y);
+    cout << largest_number;
+}
